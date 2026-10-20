@@ -215,6 +215,9 @@ def chat(body: Body):
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
+@app.post("/api/rc/sample", dependencies=[Depends(guard)])
+def rc_sample(body: Body):
+    return respond(body, lambda m: engine.load_sample(m))
 if __name__ == "__main__":
     port = 8000
     threading.Timer(1.2, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()

@@ -321,18 +321,22 @@ function renderGraph(g) {
 const LEVELS = ["School (grades 6-10)", "School (grades 11-12)", "College"];
 const EXAMPLES = ["Solving quadratic equations", "Photosynthesis", "Newton's laws of motion", "Adding fractions"];
 
+/* The Daily Review box is always on the home page, in the same panel as the question form. */
 function reviewPanel() {
-  const rv = STATE && STATE.reviews;
-  if (!rv || rv.total === 0) return "";
-  const due = rv.due;
+  const rv = (STATE && STATE.reviews) || { due: 0, total: 0 };
   const s = (n) => (n === 1 ? "" : "s");
-  const text = due > 0
-    ? `${due} fixed gap${s(due)} due for review. Check that what you fixed has stuck.`
-    : `${rv.total} fixed gap${s(rv.total)} scheduled. Reviews normally return after 1, 3, 7 and 14 days.`;
-  const button = due > 0
-    ? `<button class="btn primary" data-action="review">Start review →</button>`
-    : `<button class="btn" data-action="ff">Demo: jump to tomorrow</button>`;
-  return `<div class="review-panel"><div class="rp-title">Daily review</div><div class="rp-text">${text}</div><div class="row">${button}</div></div>`;
+  let text, buttons;
+  if (rv.due > 0) {
+    text = `${rv.due} fixed gap${s(rv.due)} due for review. Check that what you fixed has stuck.`;
+    buttons = `<button class="btn primary" data-action="review">Start review →</button>`;
+  } else if (rv.total > 0) {
+    text = `${rv.total} fixed gap${s(rv.total)} scheduled. Reviews normally return after 1, 3, 7 and 14 days.`;
+    buttons = `<button class="btn" data-action="ff">Demo: jump to tomorrow</button>`;
+  } else {
+    text = "Nothing scheduled yet. When you fix a gap, it comes back here after 1, 3, 7 and 14 days to check that it stuck.";
+    buttons = `<button class="btn" data-action="sample">Load sample progress</button>`;
+  }
+  return `<div class="review-panel"><div class="rp-title">Daily review</div><div class="rp-text">${text}</div><div class="row">${buttons}</div></div>`;
 }
 
 function startCard() {
@@ -508,6 +512,8 @@ function wireRC() {
     } else if (a === "review") {
       celebrated = false;
       await run("Preparing your review...", () => call("/api/rc/review/start"), { btn: b });
+    } else if (a === "sample") {
+      await run("Loading sample...", () => call("/api/rc/sample"), { btn: b });
     } else if (a === "ff") {
       await run("Jumping to tomorrow...", () => call("/api/rc/review/ff"), { btn: b });
     } else if (a === "back") {

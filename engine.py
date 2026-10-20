@@ -866,3 +866,38 @@ def app_state(memory):
             ],
         },
     }
+def load_sample(memory):
+    """Demo tool: adds a ready-made example (no AI calls) so Daily Review can be tried straight away."""
+    rc = get_rc(memory)
+    key = "solving quadratic equations"
+    root = "Solving quadratic equations"
+    level = "School (grades 6-10)"
+    today = str(date.today())
+    rc["maps"][key] = {
+        root: ["Factoring quadratics", "Quadratic formula"],
+        "Factoring quadratics": ["Multiplying binomials", "Greatest common factor"],
+        "Quadratic formula": ["Square roots", "Order of operations"],
+        "Multiplying binomials": [],
+        "Greatest common factor": [],
+        "Square roots": [],
+        "Order of operations": [],
+    }
+    rc["map_models"][key] = "sample data"
+    rc["status"][key] = {
+        root: "gap", "Factoring quadratics": "gap", "Quadratic formula": "mastered",
+        "Multiplying binomials": "mastered", "Greatest common factor": "mastered",
+        "Square roots": "mastered", "Order of operations": "mastered",
+    }
+    fixed_nodes = [
+        ("Multiplying binomials", "Forgot to combine like terms after multiplying."),
+        ("Greatest common factor", "Listed some factors but missed the largest shared one."),
+    ]
+    for node, text in fixed_nodes:
+        rid = f"{key}|{node}"
+        if rid not in rc["reviews"]:
+            _schedule_review(rc, key, root, node, level)
+            rc["ledger"].append({"target": root, "node": node, "text": text, "date": today, "fixed": True})
+        rc["reviews"][rid]["due"] = today
+        rc["reviews"][rid]["done"] = False
+    core.save_memory(memory)
+    return view(memory)

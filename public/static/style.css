@@ -246,4 +246,9 @@ code{font-family:'JetBrains Mono',monospace;background:rgba(255,255,255,.08);pad
 .rp-title{font:500 .64rem 'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
 .rp-text{font-size:.86rem;color:#cfd6e6;margin:6px 0 2px}
 .review-panel .row{justify-content:center}
+/* ---------- daily review panel (home page, same panel as the question form) ---------- */
+.review-panel{margin-top:24px;padding:14px 16px;border:1px solid var(--line);text-align:left}
+.rp-title{font:500 .64rem 'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.rp-text{font-size:.86rem;color:#cfd6e6;margin:6px 0 2px}
+.review-panel .row{justify-content:flex-start;margin-top:12px}
 }
