@@ -19,6 +19,8 @@ A student gets quadratic equations wrong, and every app says "do more quadratics
 5. **Daily Review.** Fixed gaps return after 1, 3, 7 and 14 days (spaced repetition). If you forgot one, it turns red on your map again.
 6. **Remembers you.** A misconception ledger, an exam countdown, and a chat coach that knows your open gaps.
 
+![Your brain](docs/brain.png)
+
 ![Root-Cause page](docs/rootcause.png)
 
 ## How it uses Nemotron on Nebius

@@ -156,12 +156,17 @@ const SUBS = {
   brain: "What Mentora knows about how you learn.", privacy: "Your data, your control.",
 };
 
+function subtitleFor(v) {
+  if (!v || !v.root || v.stage === "idle") return SUBS.root;
+  if (v.root === "Daily review" || v.stage === "review") return "Daily review";
+  return "Diagnosing · " + v.root;
+}
+
 function showPage(name) {
   $$(".page").forEach(p => p.classList.toggle("active", p.id === "page-" + name));
   $$(".nav button").forEach(b => b.classList.toggle("active", b.dataset.page === name));
   scr($("#page-title"), TITLES[name], { duration: 500 });
-  $("#page-sub").textContent = (name === "root" && CUR && CUR.root && CUR.stage !== "idle")
-    ? "Diagnosing · " + CUR.root : SUBS[name];
+  $("#page-sub").textContent = name === "root" ? subtitleFor(CUR) : SUBS[name];
   $(".main").scrollTop = 0;
   if (name === "privacy") loadMemory();
 }
@@ -219,10 +224,15 @@ function renderNotes() {
     : `<p class="muted">No notes yet.</p>`;
 }
 
+function recentLabel(s) {
+  if (s.concept === "Daily review") return "Daily review · " + String(s.date || "").slice(5);
+  return s.concept;
+}
+
 function renderRecent() {
   const list = STATE.sessions || [];
   $("#recent").innerHTML = list.length
-    ? list.map(s => `<button class="rec${s.active ? " active" : ""}" data-id="${esc(s.id)}" title="${esc(s.concept)}"><i class="dot ${esc(s.outcome || "prog")}"></i><span>${esc(s.concept)}</span></button>`).join("")
+    ? list.map(s => `<button class="rec${s.active ? " active" : ""}" data-id="${esc(s.id)}" title="${esc(recentLabel(s))}"><i class="dot ${esc(s.outcome || "prog")}"></i><span>${esc(recentLabel(s))}</span></button>`).join("")
     : `<div class="muted tiny">No diagnoses yet.</div>`;
 }
 
@@ -437,7 +447,7 @@ function renderRC(v) {
   const hasMap = !!(v.graph && v.stage !== "idle");
   $("#rc").classList.toggle("has-map", hasMap);
   if ($("#page-root").classList.contains("active")) {
-    $("#page-sub").textContent = (v.root && v.stage !== "idle") ? "Diagnosing · " + v.root : SUBS.root;
+    $("#page-sub").textContent = subtitleFor(v);
   }
   renderSteps(v); renderThread(v); renderComposer(v);
   renderGraph(hasMap ? v.graph : null);

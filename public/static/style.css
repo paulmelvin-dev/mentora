@@ -6,6 +6,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{background:#000;color:var(--text);font:14px/1.6 'Inter',system-ui,sans-serif;overflow:hidden;text-shadow:0 1px 14px rgba(0,0,0,.9)}
+::selection{background:rgba(118,185,0,.35)}
 .tag,.btag,.step-label,.hint,.recent-label,.nav-sep,.legend,.map-label,.pill,.meta,.skip{font-family:'JetBrains Mono',ui-monospace,monospace}
 .muted{color:var(--muted)}
 .tiny{font-size:.74rem;padding:6px 10px}
@@ -111,6 +112,7 @@ select.input option{background:#0b0e16}
 .btn.ghost{border-color:transparent;color:#aab4c8}
 .btn.danger{border-color:rgba(255,93,115,.55);color:#ff9aa8}
 .btn.small{padding:5px 11px;font-size:.76rem}
+button:focus-visible,.btn:focus-visible,.chip:focus-visible,.rec:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .row{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
 .row.between{justify-content:space-between}
 .row .input{flex:1;min-width:140px}
@@ -170,6 +172,12 @@ code{font-family:'JetBrains Mono',monospace;background:rgba(255,255,255,.08);pad
 .start .row{margin-top:10px}
 .start .row select{flex:1}
 .start .chips{justify-content:center}
+
+/* ---------- Daily review (home page, same panel as the question form) ---------- */
+.review-panel{margin:26px auto 0;max-width:560px;padding:16px 18px;border:1px solid var(--line);background:rgba(0,0,0,.35);text-align:center}
+.rp-title{font:500 .64rem 'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.rp-text{font-size:.86rem;color:#cfd6e6;margin:8px auto 0;max-width:460px}
+.review-panel .row{justify-content:center;margin-top:14px}
 
 /* ---------- Knowledge map ---------- */
 .rc-map{min-width:0;overflow:hidden;display:flex;flex-direction:column;opacity:0;transform:translateX(40px);
@@ -235,20 +243,7 @@ code{font-family:'JetBrains Mono',monospace;background:rgba(255,255,255,.08);pad
   .main{padding:14px;overflow:visible}
   .grid2{grid-template-columns:1fr}
   .rc-chat{height:75vh}
-  /* ---------- daily review banner ---------- */
-.review-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left;padding:12px 14px;
-  margin-bottom:20px;border:1px solid rgba(34,211,238,.45);background:rgba(34,211,238,.07)}
-.review-banner strong{display:block;font-size:.9rem}
-.review-banner span{font-size:.78rem;color:var(--muted)}
-.review-banner.dim{border-color:var(--line);background:transparent}
-/* ---------- daily review panel (inside the question panel) ---------- */
-.review-panel{margin-top:24px;padding-top:16px;border-top:1px solid var(--line);text-align:center}
-.rp-title{font:500 .64rem 'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
-.rp-text{font-size:.86rem;color:#cfd6e6;margin:6px 0 2px}
-.review-panel .row{justify-content:center}
-/* ---------- daily review panel (home page, same panel as the question form) ---------- */
-.review-panel{margin-top:24px;padding:14px 16px;border:1px solid var(--line);text-align:left}
-.rp-title{font:500 .64rem 'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
-.rp-text{font-size:.86rem;color:#cfd6e6;margin:6px 0 2px}
-.review-panel .row{justify-content:flex-start;margin-top:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
