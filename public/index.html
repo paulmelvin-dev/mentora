@@ -51,6 +51,7 @@
     <div id="recent" class="recent"></div>
 
     <div class="side-foot">
+      <button class="fx-btn" id="fx-sample">Load sample progress</button>
       <button class="fx-btn" id="fx-replay">✦ Replay intro</button>
       <button class="fx-btn" id="fx-toggle">Effects: on</button>
     </div>
@@ -99,9 +100,14 @@
         </div>
         <div id="chat-chips" class="chips pad"></div>
         <div class="composer">
+          <div class="seg" id="chat-mode" role="group" aria-label="Answer quality">
+            <button type="button" data-mode="good" class="on" title="Fast, clear answers">Good</button>
+            <button type="button" data-mode="high" title="The most detailed explanations">High</button>
+          </div>
           <textarea id="chat-input" class="input" rows="1" placeholder="Ask Mentora anything about your studies..."></textarea>
           <button id="chat-send" class="btn primary">Send</button>
         </div>
+        <div id="mode-hint" class="mode-hint"></div>
       </div>
     </section>
 

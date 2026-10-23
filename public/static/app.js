@@ -6,6 +6,8 @@ const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
 let STATE = null, CUR = null, busy = false, celebrated = false, chatBusy = false;
 const chat = [];
+let chatMode = "good";
+try { chatMode = localStorage.getItem("mentora-chat-mode") === "high" ? "high" : "good"; } catch (e) { /* ignore */ }
 
 const fx = () => window.MentoraFX || null;
 function scr(el, text, o) {
@@ -79,12 +81,43 @@ function esc(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/* Turns one protected maths piece back into something the formula engine (KaTeX) can draw. */
+function mathHtml(item) {
+  let t = item.t.trim();
+  if (item.d) {
+    const lines = t.split("\n").map(l => l.trim()).filter(Boolean);
+    if (lines.length > 1 && !/\\begin|\\\\/.test(t)) {
+      t = "\\begin{gathered}" + lines.join(" \\\\ ") + "\\end{gathered}";
+    }
+    return '<div class="mathblock">$$' + esc(t) + '$$</div>';
+  }
+  return "$" + esc(t) + "$";
+}
+
 function md(s) {
-  let t = esc(s);
+  /* 1. Protect all maths first, because an equation can span several lines. */
+  const math = [];
+  const hold = (display) => (_, m) => {
+    math.push({ d: display, t: m });
+    return "\uE000" + (math.length - 1) + "\uE001";
+  };
+  let src = String(s ?? "");
+  src = src.replace(/\$\$([\s\S]+?)\$\$/g, hold(true))
+           .replace(/\\\[([\s\S]+?)\\\]/g, hold(true))
+           .replace(/\\\(([\s\S]+?)\\\)/g, hold(false))
+           .replace(/\$([^$\n]+?)\$/g, hold(false));
+
+  /* 2. Then format the plain text. */
+  let t = esc(src);
   t = t.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
   let out = "", list = "";
   const close = () => { if (list) { out += `</${list}>`; list = ""; } };
   for (const line of t.split("\n")) {
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { close(); out += "<hr>"; continue; }
+    const hd = line.match(/^\s*#{1,4}\s+(.*)$/);
+    if (hd) { close(); out += `<h4>${hd[1]}</h4>`; continue; }
+    const only = line.trim().match(/^\uE000(\d+)\uE001$/);
+    if (only && math[+only[1]].d) { close(); out += line.trim(); continue; }
     const ul = line.match(/^\s*[-*•]\s+(.*)$/);
     const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
     const m = ul || ol;
@@ -98,7 +131,9 @@ function md(s) {
     }
   }
   close();
-  return out;
+
+  /* 3. Put the maths back. */
+  return out.replace(/\uE000(\d+)\uE001/g, (_, i) => mathHtml(math[+i]));
 }
 
 function typeset(el) {
@@ -116,12 +151,13 @@ function typeset(el) {
   } catch (e) { /* ignore */ }
 }
 
-function toast(msg) {
+function toast(msg, kind) {
   const t = $("#toast");
   t.textContent = msg;
+  t.classList.toggle("ok", kind === "ok");
   t.classList.add("show");
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => t.classList.remove("show"), 4500);
+  toast._t = setTimeout(() => t.classList.remove("show"), 5000);
 }
 
 function friendly(err) {
@@ -215,6 +251,9 @@ function renderBrain() {
   if (STATE.exam) {
     $("#exam-subject").value = STATE.exam.subject;
     $("#exam-date").value = STATE.exam.date;
+  } else {
+    $("#exam-subject").value = "";
+    $("#exam-date").value = "";
   }
 }
 
@@ -331,20 +370,18 @@ function renderGraph(g) {
 const LEVELS = ["School (grades 6-10)", "School (grades 11-12)", "College"];
 const EXAMPLES = ["Solving quadratic equations", "Photosynthesis", "Newton's laws of motion", "Adding fractions"];
 
-/* The Daily Review box is always on the home page, in the same panel as the question form. */
+/* The Daily Review box only appears when something is scheduled, so a fresh start screen stays clean. */
 function reviewPanel() {
   const rv = (STATE && STATE.reviews) || { due: 0, total: 0 };
+  if (rv.due === 0 && rv.total === 0) return "";
   const s = (n) => (n === 1 ? "" : "s");
   let text, buttons;
   if (rv.due > 0) {
     text = `${rv.due} fixed gap${s(rv.due)} due for review. Check that what you fixed has stuck.`;
     buttons = `<button class="btn primary" data-action="review">Start review →</button>`;
-  } else if (rv.total > 0) {
+  } else {
     text = `${rv.total} fixed gap${s(rv.total)} scheduled. Reviews normally return after 1, 3, 7 and 14 days.`;
     buttons = `<button class="btn" data-action="ff">Demo: jump to tomorrow</button>`;
-  } else {
-    text = "Nothing scheduled yet. When you fix a gap, it comes back here after 1, 3, 7 and 14 days to check that it stuck.";
-    buttons = `<button class="btn" data-action="sample">Load sample progress</button>`;
   }
   return `<div class="review-panel"><div class="rp-title">Daily review</div><div class="rp-text">${text}</div><div class="row">${buttons}</div></div>`;
 }
@@ -522,8 +559,6 @@ function wireRC() {
     } else if (a === "review") {
       celebrated = false;
       await run("Preparing your review...", () => call("/api/rc/review/start"), { btn: b });
-    } else if (a === "sample") {
-      await run("Loading sample...", () => call("/api/rc/sample"), { btn: b });
     } else if (a === "ff") {
       await run("Jumping to tomorrow...", () => call("/api/rc/review/ff"), { btn: b });
     } else if (a === "back") {
@@ -548,6 +583,27 @@ function wireRC() {
     await run("Resetting...", () => call("/api/rc/reset"));
   });
 
+  /* The demo button: it adds a fresh example (it never restores old data). */
+  const sample = $("#fx-sample");
+  if (sample) {
+    sample.textContent = "Demo: add sample data";
+    sample.title = "Adds an example (2 fixed gaps from a quadratic equations diagnosis) so you can try Daily Review straight away";
+    sample.addEventListener("click", async () => {
+      if (busy) return;
+      showPage("root");
+      const rv = STATE && STATE.reviews;
+      if (rv && rv.total > 0) {
+        toast("Daily review already has scheduled gaps. Use \"Demo: jump to tomorrow\" on the home page.");
+        return;
+      }
+      celebrated = false;
+      await run("Loading sample...", () => call("/api/rc/sample"));
+      if (STATE && STATE.reviews && STATE.reviews.total > 0) {
+        toast("Demo data added: 2 fixed gaps from a sample quadratic equations diagnosis are due for review.", "ok");
+      }
+    });
+  }
+
   $("#recent").addEventListener("click", async (e) => {
     const b = e.target.closest(".rec");
     if (!b || busy) return;
@@ -568,10 +624,21 @@ function addBubble(role, text) {
   return wrap;
 }
 
+function setChatMode(m) {
+  chatMode = m === "high" ? "high" : "good";
+  try { localStorage.setItem("mentora-chat-mode", chatMode); } catch (e) { /* ignore */ }
+  $$("#chat-mode button").forEach(b => b.classList.toggle("on", b.dataset.mode === chatMode));
+  const hint = $("#mode-hint");
+  if (hint) hint.textContent = chatMode === "high"
+    ? "High: the most detailed explanations (a little slower)."
+    : "Good: fast, clear answers.";
+}
+
 async function sendChat(text) {
   text = text.trim();
   if (chatBusy || !text) return;
   chatBusy = true;
+  const mode = chatMode;
   $("#chat-chips").style.display = "none";
   $("#chat-input").value = "";
   $("#chat-input").style.height = "auto";
@@ -582,7 +649,7 @@ async function sendChat(text) {
   const t0 = performance.now();
   let full = "";
   try {
-    const res = await post("/api/chat", { state: slimState(), messages: chat });
+    const res = await post("/api/chat", { state: slimState(), messages: chat, mode });
     if (!res.body) throw new Error("The AI is unavailable right now.");
     const reader = res.body.getReader();
     const dec = new TextDecoder();
@@ -595,13 +662,16 @@ async function sendChat(text) {
     }
     typeset($(".body", bubble));
     chat.push({ role: "assistant", content: full });
-    $(".meta", bubble).textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s · ${STATE ? STATE.model : "Nemotron"} on Nebius`;
+    const model = STATE ? (mode === "high" ? STATE.plan_model : STATE.model) : "Nemotron";
+    $(".meta", bubble).textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s · ${mode === "high" ? "High" : "Good"} · ${model} on Nebius`;
   } catch (err) {
     $(".body", bubble).innerHTML = `<p class="err">${esc(friendly(err))}</p>`;
     chat.pop();
   } finally {
     bubble.classList.remove("typing");
     chatBusy = false;
+    $(".main").scrollTop = 0;
+    $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
   }
 }
 
@@ -611,6 +681,8 @@ function wireChat() {
   $("#chat-chips").addEventListener("click", (e) => {
     const b = e.target.closest(".chip"); if (b) sendChat(b.textContent);
   });
+  $$("#chat-mode button").forEach(b => b.addEventListener("click", () => setChatMode(b.dataset.mode)));
+  setChatMode(chatMode);
   const input = $("#chat-input");
   $("#chat-send").addEventListener("click", () => sendChat(input.value));
   input.addEventListener("keydown", (e) => {
@@ -627,7 +699,7 @@ function wireSettings() {
   $("#exam-save").addEventListener("click", async () => {
     const subject = $("#exam-subject").value.trim(), when = $("#exam-date").value;
     if (!subject || !when) { toast("Add a subject and a date."); return; }
-    try { await call("/api/exam", { subject, when }); toast("Exam saved."); }
+    try { await call("/api/exam", { subject, when }); toast("Exam saved.", "ok"); }
     catch (e) { toast(friendly(e)); }
   });
 
@@ -653,6 +725,9 @@ function wireSettings() {
   $("#del-confirm").addEventListener("change", (e) => { $("#del-btn").disabled = !e.target.checked; });
   $("#del-btn").addEventListener("click", async () => {
     try {
+      /* Wipe this browser's saved copy first, so nothing can come back. */
+      LOCAL = { memory: null, run: null };
+      try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
       const v = await call("/api/delete");
       chat.length = 0;
       $("#chat-log").innerHTML = "";
@@ -662,7 +737,7 @@ function wireSettings() {
       loadMemory();
       $("#del-confirm").checked = false;
       $("#del-btn").disabled = true;
-      toast("All data erased.");
+      toast("All your data was erased from this browser.", "ok");
     } catch (e) { toast(friendly(e)); }
   });
 }

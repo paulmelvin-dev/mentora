@@ -28,6 +28,12 @@ core.save_memory = lambda memory: None
 app = FastAPI(title="Mentora")
 _HITS = defaultdict(deque)
 
+HIGH_MODE_NOTE = (
+    "\nThe student chose the High (most detailed) mode. Give the fullest explanation you can while staying "
+    "clear and well organised: start with a one-line answer, then explain step by step with a worked example, "
+    "and finish with a short summary. Use short headings and lists, and write maths inside dollar signs."
+)
+
 
 class Body(BaseModel):
     state: dict | None = None
@@ -39,6 +45,7 @@ class Body(BaseModel):
     subject: str = ""
     when: str = ""
     sid: str = ""
+    mode: str = "good"
     messages: list[dict] = []
 
 
@@ -171,6 +178,11 @@ def rc_review_ff(body: Body):
     return respond(body, lambda m: engine.fast_forward(m))
 
 
+@app.post("/api/rc/sample", dependencies=[Depends(guard)])
+def rc_sample(body: Body):
+    return respond(body, lambda m: engine.load_sample(m))
+
+
 @app.post("/api/rc/session", dependencies=[Depends(guard)])
 def rc_session(body: Body):
     return respond(body, lambda m: engine.get_session(m, body.sid))
@@ -199,25 +211,34 @@ def delete_all(body: Body):
 @app.post("/api/chat", dependencies=[Depends(guard)])
 def chat(body: Body):
     memory = normalize((body.state or {}).get("memory") or {})
+    high = body.mode == "high"
     system_text = core.build_system_prompt(memory) + engine.prompt_addon(memory)
+    if high:
+        system_text += HIGH_MODE_NOTE
     msgs = [{"role": "system", "content": system_text}]
     for m in body.messages[-20:]:
         if m.get("role") in ("user", "assistant"):
             msgs.append({"role": m["role"], "content": str(m.get("content", ""))[:4000]})
 
+    models = [core.PLAN_MODEL, core.MODEL] if high else [core.MODEL]
+    limit = 2500 if high else 1500
+
     def gen():
-        try:
-            for piece in core.stream_ai(msgs):
-                yield piece
-        except Exception:
-            yield "\n\n[Mentora couldn't reach the AI. Please try again.]"
+        for i, model in enumerate(models):
+            started = False
+            try:
+                for piece in core.stream_ai(msgs, model=model, max_tokens=limit):
+                    started = True
+                    yield piece
+                return
+            except Exception:
+                if started or i == len(models) - 1:
+                    yield "\n\n[Mentora couldn't reach the AI. Please try again.]"
+                    return
 
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
-@app.post("/api/rc/sample", dependencies=[Depends(guard)])
-def rc_sample(body: Body):
-    return respond(body, lambda m: engine.load_sample(m))
 if __name__ == "__main__":
     port = 8000
     threading.Timer(1.2, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
