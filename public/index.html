@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mentora</title>
 <meta name="description" content="Mentora finds the root cause behind what you're stuck on, teaches the missing building blocks from the bottom up, and checks later that they stuck. Built with NVIDIA Nemotron on Nebius.">
 <meta name="theme-color" content="#000000">
@@ -10,6 +10,24 @@
 <meta property="og:title" content="Mentora: find the root cause, fix the gap">
 <meta property="og:description" content="A private AI study coach that traces what you're stuck on back to the missing building blocks.">
 <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+<script>
+/* Phones get a light look: no black hole animation, no intro. */
+(function () {
+  var mobile = window.matchMedia("(max-width: 820px)").matches || window.matchMedia("(pointer: coarse)").matches;
+  window.MENTORA_MOBILE = mobile;
+  try {
+    if (mobile) {
+      if (localStorage.getItem("mentora-fx") !== "off") {
+        localStorage.setItem("mentora-fx-auto", "1");
+        localStorage.setItem("mentora-fx", "off");
+      }
+    } else if (localStorage.getItem("mentora-fx-auto")) {
+      localStorage.removeItem("mentora-fx-auto");
+      localStorage.removeItem("mentora-fx");
+    }
+  } catch (e) { /* ignore */ }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
@@ -51,7 +69,7 @@
     <div id="recent" class="recent"></div>
 
     <div class="side-foot">
-      <button class="fx-btn" id="fx-sample">Load sample progress</button>
+      <button class="fx-btn" id="fx-sample">Demo: add sample data</button>
       <button class="fx-btn" id="fx-replay">✦ Replay intro</button>
       <button class="fx-btn" id="fx-toggle">Effects: on</button>
     </div>
@@ -68,6 +86,10 @@
 
     <!-- ROOT-CAUSE -->
     <section id="page-root" class="page active">
+      <div id="rc-switch" class="rc-switch">
+        <button type="button" data-view="chat" class="on">Chat</button>
+        <button type="button" data-view="map">Map</button>
+      </div>
       <div id="rc" class="rc">
         <div class="rc-chat">
           <div id="rc-steps" class="steps" style="display:none"></div>
@@ -124,6 +146,11 @@
           <input id="exam-date" class="input" type="date">
           <button id="exam-save" class="btn primary">Save</button>
         </div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">Demo tools</div>
+        <p class="muted" style="font-size:.84rem">Reviews normally return after a few days. Add a ready-made example to try Daily Review right now.</p>
+        <div class="row"><button class="btn" id="brain-sample">Add sample data</button></div>
       </div>
     </section>
 

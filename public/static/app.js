@@ -479,7 +479,22 @@ function renderComposer(v) {
   }
 }
 
+function setRcView(view) {
+  $("#rc").classList.toggle("m-map", view === "map");
+  $$("#rc-switch button").forEach(b => b.classList.toggle("on", b.dataset.view === view));
+}
+
+document.addEventListener("click", (e) => {
+  const sw = e.target.closest("#rc-switch button");
+  if (sw) setRcView(sw.dataset.view);
+  const demo = e.target.closest("#brain-sample");
+  if (demo) { const side = $("#fx-sample"); if (side) side.click(); }
+});
+
 function renderRC(v) {
+  const withMap = !!(v.graph && v.stage !== "idle");
+  $("#page-root").classList.toggle("has-map", withMap);
+  if (!withMap) setRcView("chat");
   CUR = v;
   const hasMap = !!(v.graph && v.stage !== "idle");
   $("#rc").classList.toggle("has-map", hasMap);
