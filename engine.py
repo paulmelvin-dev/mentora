@@ -279,23 +279,63 @@ def _safe_reveal(question, node, answer, level, fallback=""):
     return fallback or "Mentora couldn't write out the full answer just now. The lesson that follows covers it step by step."
 
 
+def normalize_answer(text):
+    """Rewrites common typed forms into standard notation, so the grader judges the maths, not the typing."""
+    t = " ".join((text or "").split())
+    t = t.replace("**", "^").replace("−", "-").replace("×", "*").replace("÷", "/").replace("√", " sqrt ")
+    for sup, plain in (("²", "^2"), ("³", "^3"), ("⁴", "^4")):
+        t = t.replace(sup, plain)
+    t = re.sub(r"^(?:the\s+)?(?:answer|ans)\b\s*(?:is|:)?\s*", "", t, flags=re.I)
+    t = re.sub(r"\bplus or minus\b|\+/-|\+-", "±", t, flags=re.I)
+    t = re.sub(r"\bcube\s*root\s*(?:of\s*)?", "cbrt ", t, flags=re.I)
+    t = re.sub(r"\bsquare\s*root\s*(?:of\s*)?", "sqrt ", t, flags=re.I)
+    t = re.sub(r"\broot\s*(?:of\s*)?(?=[\d(])", "sqrt ", t, flags=re.I)
+    t = re.sub(r"\bsquared\b", "^2", t, flags=re.I)
+    t = re.sub(r"\bcubed\b", "^3", t, flags=re.I)
+    t = re.sub(r"\bto the power(?: of)?\s*(\d+)", r"^\1", t, flags=re.I)
+    t = re.sub(r"\bmultiplied by\b|\btimes\b", "*", t, flags=re.I)
+    t = re.sub(r"\bdivided by\b", "/", t, flags=re.I)
+    t = re.sub(r"\bpi\b", "π", t, flags=re.I)
+    t = re.sub(r"\s*\^\s*", "^", t)
+    return t.strip()
+
+
+def _second_opinion(question, answer, node):
+    text, _ = smart_ai(
+        "You are a careful maths and science checker.",
+        f"Concept: {node}\nQuestion: {question}\nStudent answer: {answer}\n\n"
+        "Work out the correct answer yourself first. Then decide whether the student's answer is equivalent to it. "
+        "Ignore formatting and notation (x squared = x^2, sqrt(16) = square root of 16), the order of terms or "
+        "solutions, and tiny rounding differences. An answer that is only partly right, or that does not attempt "
+        "the question, is NO.\n"
+        "End with exactly one line: FINAL: YES or FINAL: NO",
+        max_tokens=800,
+    )
+    return bool(re.search(r"FINAL:\s*\**\s*YES", text, re.I))
+
+
 def grade_probe(question, answer, node):
+    clean = normalize_answer(answer)
     reply = core.ask_ai(
-        "You are a strict but kind diagnostic tutor.",
+        "You are a strict but fair diagnostic tutor.",
         f"Concept being tested: {node}\nQuestion: {question}\n"
-        f"Student answer: {answer if answer.strip() else '(no answer)'}\n\n"
-        "Rules: the student may write powers like x^2. If the student made no real attempt, "
-        "or the answer is unrelated, or it is not actually correct, the verdict is WRONG. "
-        "Only say CORRECT if the answer really contains the right result.\n"
-        "Reply in exactly this format, on three lines:\n"
+        f"Student answer: {clean if clean else '(no answer)'}\n\n"
+        "Method: first work out the correct answer yourself, then compare it with the student's answer. "
+        "Judge the maths, not the typing: accept any equivalent form (x squared = x^2, "
+        "sqrt(16) = square root of 16 = 4, 1/2 = 0.5, a different order of terms or solutions, extra spaces). "
+        "If the student made no real attempt, or the answer is unrelated or not actually correct, "
+        "the verdict is WRONG.\n"
+        "Reply in exactly this format, on four lines:\n"
+        "SOLUTION: the correct answer you worked out, very short\n"
         "VERDICT: CORRECT or WRONG\n"
         "MISCONCEPTION: one short sentence naming the specific wrong idea, or NONE if correct\n"
         "EXPLAIN: one or two sentences with the right answer. Write maths inside dollar signs.",
-        max_tokens=500,
+        max_tokens=700,
     )
     verdict = re.search(r"VERDICT:\s*\**\s*(CORRECT|WRONG)", reply, re.I)
     mis = re.search(r"MISCONCEPTION:\s*(.+)", reply, re.I)
     exp = re.search(r"EXPLAIN:\s*(.+)", reply, re.I | re.S)
+    sol = re.search(r"SOLUTION:\s*(.+)", reply, re.I)
     correct = bool(verdict) and verdict.group(1).upper() == "CORRECT"
     misconception = mis.group(1).strip() if mis else ""
     if misconception.upper().startswith("NONE"):
@@ -303,6 +343,14 @@ def grade_probe(question, answer, node):
     explain = exp.group(1).strip() if exp else ""
     if correct and re.search(r"no (real )?attempt|did not (answer|attempt|provide)|didn't (answer|attempt)|not an answer|no answer", explain, re.I):
         correct = False      # the AI contradicted itself: treat as wrong
+    if not correct and clean:
+        try:                 # a second opinion from the stronger model before marking a real attempt wrong
+            if _second_opinion(question, clean, node):
+                correct = True
+                misconception = ""
+                explain = f"That's right. The answer is {sol.group(1).strip()}." if sol else "That's right."
+        except Exception:
+            pass
     _log(question, answer, node, reply, correct)
     return correct, misconception, explain
 

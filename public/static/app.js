@@ -465,7 +465,7 @@ function renderComposer(v) {
   }
   const s = v.stage;
   if (s === "scan" || s === "check" || s === "review") {
-    c.innerHTML = `<textarea id="rc-answer" class="input" rows="2" placeholder="Type your answer... (write powers like x^2)"></textarea>
+    c.innerHTML = `<textarea id="rc-answer" class="input" rows="2" placeholder="Type your answer... (x^2 or x squared, sqrt(16) or square root of 16)"></textarea>
       <div class="row between"><span class="hint">Ctrl+Enter to send</span>
       <div class="row" style="margin:0"><button class="btn ghost" data-action="idk">I don't know</button><button class="btn primary" data-action="submit">Send</button></div></div>`;
     const ta = $("#rc-answer"); if (ta) ta.focus();
@@ -584,7 +584,8 @@ function wireRC() {
   });
 
   root.addEventListener("keydown", (e) => {
-    if (e.target.id === "rc-answer" && (e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        if (e.target.id === "rc-answer" && e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
       const b = $('[data-action="submit"]', root); if (b) b.click();
     }
     if (e.target.id === "rc-concept" && e.key === "Enter") {

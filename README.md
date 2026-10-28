@@ -1,5 +1,9 @@
 # Mentora: find the root cause, fix the gap
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg) **MIT licensed. Built for the Nebius x NVIDIA Global AI Hackathon (Personal AI track).**
+
+**Try it:** https://mentora-gamma-ten.vercel.app/ (no login needed) · **Demo video:** https://YOUR-YOUTUBE-LINK
+
 > A private AI study coach that doesn't just say "practise more". It traces a wrong answer back through the building blocks you're missing, teaches them from the bottom up, and checks later that they stuck.
 
 Built for the **Nebius x NVIDIA Global AI Hackathon** (Personal AI track), running **NVIDIA Nemotron** on **Nebius Token Factory**.
@@ -46,6 +50,13 @@ flowchart LR
     UI --- MEM[("Your data<br/>stored in your browser")]
 ```
 
+## Where Nebius Token Factory and NVIDIA Nemotron fit
+
+- **NVIDIA models used:** Nemotron 3.5 Lightning (questions, grading, chat) and Nemotron 3 Super (prerequisite map, root-cause report, lessons, full solutions).
+- **How Token Factory helped:** its OpenAI-compatible API let me use the standard OpenAI Python client by changing only the base URL, and one account gave me both a fast model and a strong model to route between.
+- **Other Nebius services used:** none. Inference runs on Token Factory only. The web app is hosted on Vercel.
+- **Built with AI assistance:** I built this as a beginner with an AI assistant (Claude) helping me write and debug code. The idea, decisions and testing were mine.
+
 ## Privacy by design
 
 Each visitor's data lives in their own browser. The server is stateless: it processes each request and saves nothing, so every visitor gets a separate, private copy. You can view, download and delete your data on the Memory & privacy page.
@@ -56,6 +67,7 @@ Each visitor's data lives in their own browser. The server is stateless: it proc
 - **Tested on:** during development I tried it on quadratic equations (maths), projectile motion (physics), a chemistry preparation topic, and German question forming (languages). Maths topics with short, exact answers work best.
 - **Data is tied to one browser.** Clearing browser data erases it, so use the Download button on the Memory & privacy page if you want a copy.
 - **Demo tools:** the "Load sample progress" and "Demo: jump to tomorrow" buttons exist so Daily Review can be tried in seconds. A real review takes a day.
+-- **Phones** get a lighter look (twinkling stars, no black hole animation) so the app stays fast.
 
 ## Run it locally
 
